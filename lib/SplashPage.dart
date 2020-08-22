@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mobx/mobx.dart';
 import 'package:provider/provider.dart';
 
 import 'Theme/ThemeStore.dart';
@@ -12,16 +13,47 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage> {
   ThemeStore themeStore;
 
+  GlobalKey<ScaffoldState> _scaffoldKey;
+  List<ReactionDisposer> _disposers;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaffoldKey = GlobalKey<ScaffoldState>();
+  }
+
+  @override
+  void dispose() {
+    _disposers.forEach((disposer) => disposer());
+    super.dispose();
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
     themeStore ??= Provider.of<ThemeStore>(context);
+    _disposers ??= [
+      reaction((fn) => themeStore.isDark, (isDark) {
+        _scaffoldKey.currentState?.removeCurrentSnackBar();
+
+        if (isDark) {
+          _scaffoldKey.currentState.showSnackBar(SnackBar(
+            content: Text("Hello, Dark!"),
+          ));
+        } else {
+          _scaffoldKey.currentState.showSnackBar(SnackBar(
+            content: Text("Hello, Light!"),
+          ));
+        }
+      })
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       floatingActionButton: FloatingActionButton(
         onPressed: themeStore.toggleTheme,
         child: themeStore.isDark
